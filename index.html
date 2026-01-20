@@ -563,18 +563,29 @@
                 const truncatedAddress = `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}`;
                 walletAddress.textContent = truncatedAddress;
 
-                // Fetch SOL balance
-                try {
-                    const connection = new window.solanaWeb3.Connection(
-                        'https://api.mainnet-beta.solana.com',
-                        'confirmed'
-                    );
-                    const balance = await connection.getBalance(response.publicKey);
-                    const solAmount = (balance / 1000000000).toFixed(4);
-                    solBalance.textContent = `${solAmount} SOL`;
-                } catch (error) {
-                    console.error('Error fetching balance:', error);
-                    solBalance.textContent = 'Error loading balance';
+                // Fetch SOL balance with fallback RPC endpoints
+                const rpcEndpoints = [
+                    'https://api.mainnet-beta.solana.com',
+                    'https://solana-api.projectserum.com',
+                    'https://rpc.ankr.com/solana'
+                ];
+                
+                let balanceFetched = false;
+                for (const endpoint of rpcEndpoints) {
+                    try {
+                        const connection = new window.solanaWeb3.Connection(endpoint, 'confirmed');
+                        const balance = await connection.getBalance(response.publicKey);
+                        const solAmount = (balance / 1000000000).toFixed(4);
+                        solBalance.textContent = `${solAmount} SOL`;
+                        balanceFetched = true;
+                        break;
+                    } catch (error) {
+                        console.error(`Error fetching balance from ${endpoint}:`, error);
+                    }
+                }
+                
+                if (!balanceFetched) {
+                    solBalance.textContent = 'Balance unavailable';
                 }
 
                 // Update UI
@@ -608,9 +619,9 @@
             alert(message);
         });
 
-        // Load Solana Web3.js dynamically
+        // Load Solana Web3.js dynamically - pinned to stable version
         const script = document.createElement('script');
-        script.src = 'https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js';
+        script.src = 'https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js';
         script.async = true;
         document.head.appendChild(script);
     </script>
